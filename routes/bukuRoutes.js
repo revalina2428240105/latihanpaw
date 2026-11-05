@@ -1,13 +1,12 @@
 const express = require('express');
-
 const router = express.Router();
 
-const bukuController = require('../controllers/bukuController');
+const bukuControllers = require('../controllers/bukuControllers');
 
-router.get('/', bukuController.getAllBuku);
-router.get('/:id', bukuController.getBukuById);
-router.post('/', bukuController.createBuku);
-router.put('/:id', bukuController.updateBuku);
-router.delete('/:id', bukuController.deleteBuku);
+router.post('/', bukuControllers.create);
+router.get('/', bukuControllers.getAll);
+router.get('/:id', bukuControllers.getById);
+router.put('/:id', bukuControllers.update);
+router.delete('/:id', bukuControllers.remove);
 
 module.exports = router;

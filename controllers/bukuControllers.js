@@ -1,103 +1,184 @@
-const Buku = require('../models/bukuModel');
+const mongoose = require('mongoose');
+const Buku = require('../models/bukuModels');
 
-// GET semua buku
-exports.getAllBuku = async (req, res) => {
-    try {
-        const buku = await Buku.find();
-
-        res.status(200).json({
-            status: 'success',
-            data: buku
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-};
-
-// GET buku berdasarkan ID
-exports.getBukuById = async (req, res) => {
-    try {
-        const buku = await Buku.findById(req.params.id);
-
-        if (!buku) {
-            return res.status(404).json({
-                message: 'Buku tidak ditemukan'
-            });
-        }
-
-        res.status(200).json({
-            status: 'success',
-            data: buku
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message
-        });
-    }
-};
-
-// POST buku
-exports.createBuku = async (req, res) => {
+// CREATE - Menambahkan buku
+exports.create = async (req, res) => {
     try {
         const buku = await Buku.create(req.body);
 
         res.status(201).json({
+            status: 'success',
             message: 'Buku berhasil ditambahkan',
             data: buku
         });
-    } catch (error) {
+    } catch (err) {
         res.status(400).json({
-            message: error.message
+            status: 'error',
+            message: err.message
         });
     }
 };
 
-// PUT buku
-exports.updateBuku = async (req, res) => {
+// READ - Menampilkan semua buku
+exports.getAll = async (req, res) => {
     try {
+        const {
+            kategori,
+            penulis,
+            tahunTerbit,
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            order = 'desc',
+            select
+        } = req.query;
+
+        const filter = {};
+
+        if (kategori) {
+            filter.kategori = new RegExp(kategori, 'i');
+        }
+
+        if (penulis) {
+            filter.penulis = new RegExp(penulis, 'i');
+        }
+
+        if (tahunTerbit) {
+            filter.tahunTerbit = Number(tahunTerbit);
+        }
+
+        const halaman = Math.max(1, Number(page) || 1);
+        const batas = Math.max(1, Math.min(100, Number(limit) || 10));
+        const skip = (halaman - 1) * batas;
+
+        const sortOrder = order === 'asc' ? 1 : -1;
+        const sorting = { [sortBy]: sortOrder };
+
+        let query = Buku.find(filter)
+            .sort(sorting)
+            .skip(skip)
+            .limit(batas);
+
+        if (select) {
+            query = query.select(select.split(',').join(' '));
+        }
+
+        const data = await query;
+        const totalData = await Buku.countDocuments(filter);
+
+        res.status(200).json({
+            status: 'success',
+            totalData,
+            halaman,
+            totalHalaman: Math.ceil(totalData / batas),
+            data
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: err.message
+        });
+    }
+};
+
+// READ - Menampilkan buku berdasarkan ID
+exports.getById = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'ID buku tidak valid'
+            });
+        }
+
+        const buku = await Buku.findById(req.params.id);
+
+        if (!buku) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Buku tidak ditemukan'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: buku
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: err.message
+        });
+    }
+};
+
+// UPDATE - Mengubah buku
+exports.update = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'ID buku tidak valid'
+            });
+        }
+
         const buku = await Buku.findByIdAndUpdate(
             req.params.id,
             req.body,
-            { new: true, runValidators: true }
+            {
+                new: true,
+                runValidators: true
+            }
         );
 
         if (!buku) {
             return res.status(404).json({
+                status: 'error',
                 message: 'Buku tidak ditemukan'
             });
         }
 
         res.status(200).json({
+            status: 'success',
             message: 'Buku berhasil diperbarui',
             data: buku
         });
-    } catch (error) {
+    } catch (err) {
         res.status(400).json({
-            message: error.message
+            status: 'error',
+            message: err.message
         });
     }
 };
 
-// DELETE buku
-exports.deleteBuku = async (req, res) => {
+// DELETE - Menghapus buku
+exports.remove = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'ID buku tidak valid'
+            });
+        }
+
         const buku = await Buku.findByIdAndDelete(req.params.id);
 
         if (!buku) {
             return res.status(404).json({
+                status: 'error',
                 message: 'Buku tidak ditemukan'
             });
         }
 
         res.status(200).json({
-            message: 'Buku berhasil dihapus'
+            status: 'success',
+            message: 'Buku berhasil dihapus',
+            data: buku
         });
-    } catch (error) {
+    } catch (err) {
         res.status(500).json({
-            message: error.message
+            status: 'error',
+            message: err.message
         });
     }
 };

@@ -3,34 +3,39 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 
-const bukuRoutes = require('./routes/bukuRoutes');
-const bukuController = require('../controllers/bukuController');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+const bukuRoutes = require('./routes/bukuRoutes');
+
 app.use(express.json());
 
-// Route utama
 app.get('/', (req, res) => {
-    res.json({
+    res.status(200).json({
         message: 'RESTful API Perpustakaan berjalan!'
     });
 });
 
-// Route buku
 app.use('/api/buku', bukuRoutes);
+
+// Route tidak ditemukan
+app.use((req, res) => {
+    res.status(404).json({
+        status: 'error',
+        message: 'Endpoint tidak ditemukan'
+    });
+});
 
 // Koneksi MongoDB
 mongoose.connect(process.env.DB_URI)
     .then(() => {
-        console.log('MongoDB berhasil terhubung!');
+        console.log('Terhubung ke MongoDB');
 
         app.listen(PORT, () => {
             console.log(`Server berjalan di http://localhost:${PORT}`);
         });
     })
     .catch((err) => {
-        console.error('Koneksi MongoDB gagal:', err.message);
+        console.error('Gagal terhubung ke MongoDB:', err.message);
+        process.exit(1);
     });
